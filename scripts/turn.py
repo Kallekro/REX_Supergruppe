@@ -5,11 +5,11 @@ import robot
 import sys
 
 if __name__ == "__main__":
-  drive_time = int(sys.argv[1])
-  if drive_time <= 0:
-    drive_time = 1      
+  turn_time = int(sys.argv[1])
+  if turn_time <= 0:
+    turn_time = 1      
   arlo = robot.Robot()
   robot.go()
-  sleep(drive_time)
+  sleep(turn_time)
   arlo.stop()
 
