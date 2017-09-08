@@ -4,7 +4,7 @@ import robot
 
 arlo = robot.Robot()
 drive_a_meter_time = 5.8
-turn_90_degrees_time = 1.51
+turn_90_degrees_time = 1.5
 
 def drive_square(straight_time, turn_time):
   """ Drive in a square, driving straight_time forward and turning for turn_time time (to achieve 90 degrees).
