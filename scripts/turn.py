@@ -1,8 +1,14 @@
 import time
 from time import sleep
-import robot
-
 import sys
+
+try:
+  import robot
+except:
+  e = sys.exc_info()[0]
+  print "Robot module not loaded"
+  print "Error: %s" % e
+  sys.exit()
 
 def main(*arg):
   if len(arg) != 3:
