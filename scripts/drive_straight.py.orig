@@ -4,9 +4,10 @@ import sys
 
 import robot
 
+arlo = robot.Robot()
 
 def main(arg):
-  drive_time = int(sys.argv[1])
+  drive_time = int(arg)
   if drive_time <= 0:
     drive_time = 1      
 <<<<<<< HEAD
