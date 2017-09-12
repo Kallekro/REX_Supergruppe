@@ -9,7 +9,7 @@ if __name__ == "__main__":
   if drive_time <= 0:
     drive_time = 1      
   arlo = robot.Robot()
-  robot.go()
+  arlo.go()
   sleep(drive_time)
   arlo.stop()
 
