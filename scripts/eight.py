@@ -10,6 +10,10 @@ def drive_eight(n):
   # Variables for the go_diff function
   fast_speed = 50 
   slow_speed = 10
+=======
+  fast_speed = 80 
+  slow_speed = 25
+>>>>>>> 14f18d283e4f0f0f9c5911a3dfd5901e1214305e
   # Half a lap time, this is the time the robot turns in a direction before switching
   half_lap_time = 6
   # To avoid having to manually stop the robot we set it to drive continuously for x amount of seconds.
