@@ -5,15 +5,16 @@ import sys
 import robot
 
 
+
 def main(arg):
   drive_time = int(sys.argv[1])
   if drive_time <= 0:
     drive_time = 1      
-<<<<<<< HEAD
   arlo = robot.Robot()
-=======
->>>>>>> d8ea49693cc388462b2e048a838f436159dc0874
-  arlo.go()
+  arlo.go_diff(25, 25, 1, 1)
+  sleep(drive_time)
+  arlo.stop()
+  arlo.go_diff(25, 25, 0, 0)
   sleep(drive_time)
   arlo.stop()
   
