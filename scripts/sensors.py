@@ -31,4 +31,6 @@ while(1):
         else:
             #turn right
             #moveforward
+
+
 arlo.stop()
