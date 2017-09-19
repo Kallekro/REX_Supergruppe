@@ -8,10 +8,8 @@ import robot
 
 arlo = robot.Robot()
 
-
 sensor_to_meassure = 0
 meassurements = np.arange(10)
-
 
 for i in range(1):
     inp = raw_input()

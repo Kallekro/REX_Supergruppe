@@ -8,7 +8,6 @@ data = np.arange(10)
 print "What sensor data to plot?"
 sensor = int(raw_input())
 
-
 for dist in dists:
     index = 0
     with open("sensor_data/sensor{0}_dist{1}_log".format(sensor,dist), 'r') as f:
