@@ -1,4 +1,3 @@
-from __future__ import division
 import time
 from time import sleep
 import robot
@@ -7,7 +6,7 @@ import robot_constants
 import robot_constants as rc
 
 arlo = robot.Robot()
-drive_a_meter_time = rc.one_meter_time / 4 
+drive_a_meter_time = rc.one_meter_time 
 turn_90_degrees_time = rc.turn_90degrees_time 
 
 def drive_square(straight_time, turn_time):
@@ -16,12 +15,21 @@ def drive_square(straight_time, turn_time):
    # We just repeat the same instructions 4 times to drive in a square
  
   for i in range(4):
-    arlo.go_diff( 79, 80, 1, 1)
+<<<<<<< HEAD
+    #print arlo.go()
+    arlo.go_diff(50, 50, 1, 1)
     sleep(rc.one_meter_time)
-    arlo.go_diff( 79, 80, 0, 1) 
+    arlo.stop()
+    arlo.go_diff(50, 50, 0, 1) 
     sleep(rc.turn_90degrees_time)
+=======
+    print arlo.go_diff(rc.max_speed, rc.max_speed);
+    sleep(straight_time)
+    print arlo.left()
+    sleep(turn_time)
+>>>>>>> 14f18d283e4f0f0f9c5911a3dfd5901e1214305e
+    print arlo.stop()
 
-for i in range(10):
-  drive_square(drive_a_meter_time, turn_90_degrees_time); # Drive in non-continuous square-shape   
+drive_square(drive_a_meter_time, turn_90_degrees_time); # Drive in non-continuous square-shape   
 
 arlo.stop()
