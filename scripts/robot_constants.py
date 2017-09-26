@@ -1,5 +1,6 @@
 # Script for defining robot constants
 # Start by importing this 
+
 import time
 import random
 from time import sleep

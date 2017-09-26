@@ -77,7 +77,7 @@ class Robot(object):
     def go_diff(self, speedLeft, speedRight, dirLeft, dirRight):
         """Start left motor with speed speedLeft (in [0;255]) and direction dirLeft (0=reverse, 1=forward)
            and right motor with speed speedRight (in [0;255]) and direction dirRight (0=reverse, 1=forward)"""
-        cmd = 'd' + str(speedLeft) + ',' + str(speedRight) + ',' + str(dirLeft) + ',' + str(dirRight) + '\n'
+        cmd = 'd' + str(speedLeft) + ',' + str(speedRight) + ',' + str(dirLeft) + ',' + str(dirRight) + ',\n'
         return self.send_command(cmd)
     
     
