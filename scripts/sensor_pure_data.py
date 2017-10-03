@@ -2,7 +2,7 @@ import time
 import random
 from time import sleep
 import robot
-import robot_constants as rc
+#import robot_constants as rc
 arlo = robot.Robot()
 import random 
 
@@ -23,12 +23,12 @@ def goLeft():
 
 try:
     while 1:
-        #print 'right ',arlo.read_sensor(3)
-        #sleep(1)
+        print 'right ',arlo.read_sensor(3)
+        sleep(1)
         print 'left ',arlo.read_sensor(2)
         sleep(1)
-        #print 'front ',arlo.read_sensor(0)
-        #sleep(1)
+        print 'front ',arlo.read_sensor(0)
+        sleep(1)
         
 except KeyboardInterrupt:
     arlo.stop()

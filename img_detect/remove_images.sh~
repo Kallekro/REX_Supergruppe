@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+rm ./img/*.jpg
+rm ./img/Hueimg/*.jpg

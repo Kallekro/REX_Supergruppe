@@ -1,9 +1,15 @@
 from findObject import * 
 import time
+import cv2
 
 scaleFactor = 0.1 
 
-print analyzeImage("img/imgfirst.jpg", scaleFactor)
+t1 = time.time()
+res, img = analyzeImage("img/other files/img2greens.jpg", scaleFactor, True)
+print time.time() - t1
+print res
+cv2.imwrite("img/Hueimg/Test.png", img)
+
 
 """
 fullSize = 0 

@@ -9,7 +9,8 @@ class Robot(object):
         #self.port = '/dev/ttyACM0'
         self.port = port
         
-        self.serialRead = serial.Serial(self.port,9600, timeout=1)
+        #self.serialRead = serial.Serial(self.port,9600, timeout=1)
+        self.serialRead = serial.Serial(self.port,9600, timeout=None)
 
         # Wait if serial port is not open yet
         while not self.serialRead.isOpen():

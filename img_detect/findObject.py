@@ -34,14 +34,14 @@ def findObjects(img):
 
   # extract hue, value and saturation
   h = hsv[:,:,0]/255.0
-  v = hsv[:,:,1]/255.0
-  s = hsv[:,:,2]/255.0
+  s = hsv[:,:,1]/255.0
+  v = hsv[:,:,2]/255.0
   
 
   # parameters for green color
-  T1, T2, T3 = 0.2, 0.75, 0.2
+  T1, T2, T3 = 0.25, 0.2, 0.1
   # find the specified greens
-  green = ((abs(h - 0.33) < T1) & (v < T2) & (s > T3)).astype(float)
+  green = ((abs(h - 0.33) < T1) & (v > T2) & (s > T3)).astype(float)
 
   # apply mask
   masked = cv2.bitwise_and(green,green,mask=green_mask)
@@ -67,8 +67,8 @@ def findRectangles(img):
 
     aspect_ratio = b_w / b_h;
     # if aspect ratio is appr 1 shape is square (and we're looking for rects)
-    if aspect_ratio >= 0.95 and aspect_ratio <= 1.05:
-      return False
+    #if aspect_ratio >= 0.95 and aspect_ratio <= 1.05:
+    #  return False
     
     b_area = b_w*b_h
     # if the contour area fills over around 60% of the bounding rect it is probably a weird-shaped-but-still-rectangle  
@@ -86,33 +86,34 @@ def findRectangles(img):
   # find contours in image
   contours, hierarchy = cv2.findContours(gray, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:]
 
-  validRectContours = []
-  contourAreas = []
-  # remove contours that are not rectangle-ish shaped
-  for i in range(len(contours)):
-    # instead of using the real contour we use an approximation with much fewer points
-    # number of points in approximation is 4 if the shape is rect-shaped
-    contours[i] = cv2.approxPolyDP(contours[i], 0.05*cv2.arcLength(contours[i], True), True)
-    if (detectRectangle(contours[i])):
-      validRectContours.append(contours[i])
-      # store area to use in average contour size
-      contourAreas.append(cv2.contourArea(contours[i]))
+  # validRectContours = []
+  # contourAreas = []
+  # # remove contours that are not rectangle-ish shaped
+  # for i in range(len(contours)):
+  #   # instead of using the real contour we use an approximation with much fewer points
+  #   # number of points in approximation is 4 if the shape is rect-shaped
+  #   contours[i] = cv2.approxPolyDP(contours[i], 0.05*cv2.arcLength(contours[i], True), True)
+  #   if (detectRectangle(contours[i])):
+  #     validRectContours.append(contours[i])
+  #     # store area to use in average contour size
+  #     contourAreas.append(cv2.contourArea(contours[i]))
 
-  if len(validRectContours) == 0:
-    # No valid contours found
-    return [], None
+  # if len(validRectContours) == 0:
+  #   # No valid contours found
+  #   return [], None
 
-  validContours = []
-  # Remove the found contours that are smaller than 1/7 of the largest contour found
-  biggestObject = validRectContours[0] 
-  maxArea = max(contourAreas)
-  for i in range(len(contourAreas)):
-    if maxArea - contourAreas[i] < maxArea * 0.7:
-      validContours.append(validRectContours[i])
-    if maxArea == contourAreas[i]:
-      biggestObject = validRectContours[i]
+  # validContours = []
+  # # Remove the found contours that are smaller than 1/7 of the largest contour found
+  # biggestObject = validRectContours[0] 
+  # maxArea = max(contourAreas)
+  # for i in range(len(contourAreas)):
+  #   if maxArea - contourAreas[i] < maxArea * 0.7 and contourAreas[i] > 600:
+  #     validContours.append(validRectContours[i])
+  #   if maxArea == contourAreas[i]:
+  #     biggestObject = validRectContours[i]
 
-  return validContours, biggestObject
+  #return validContours, biggestObject
+  return contours, contours[0]
 
 
 def loadImage(path, scaleFactor, returnSize=False):
@@ -127,20 +128,26 @@ def loadImage(path, scaleFactor, returnSize=False):
 def makeResultObject(x, y, w, h, img_size, scaleFactor):
   centerX = (x/scaleFactor + (h/scaleFactor)/2)
   centerY = (y/scaleFactor + (w/scaleFactor)/2)
-  lenA = centerY
+  lenA = centerX
   lenB = img_size[1] - lenA
 
   return Presult(h/scaleFactor, centerX, centerY, True, lenA, lenB)
 
-def analyzeImage(path, scaleFactor):
+def analyzeImage(path, scaleFactor, extraStuff=False):
   img, size = loadImage(path, scaleFactor, True)
   hsv_img = findObjects(img)
   valid_cnts, biggestCnt = findRectangles(hsv_img)
   if len(valid_cnts) > 0:
     (b_x, b_y, b_w, b_h) = cv2.boundingRect(biggestCnt)  
-    res = makeResultObject(b_x, b_y, b_w, b_h,size, scaleFactor)
+    res = makeResultObject(b_x, b_y, b_w, b_h, size, scaleFactor)
   else:
-    res = makeResultObject(0,0,0,False,[0,0],1)
-  return res
+    res = Presult(0,0,0,False,0,0) #makeResultObject(0,0,0,0,[0,0],1)
+  if extraStuff:  
+    if len(valid_cnts) > 0:
+      cv2.drawContours(hsv_img, valid_cnts, -1, (0,0,255), 3)
+      cv2.drawContours(hsv_img, [biggestCnt], -1, (0,255,0), 3)
+    return res, hsv_img
+  else:
+    return res
 
 
