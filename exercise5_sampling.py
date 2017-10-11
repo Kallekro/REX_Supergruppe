@@ -4,6 +4,7 @@ import camera
 import numpy as np
 import math
 import random_numbers as rnd
+import copy
 
 # TODO: The coordinate system is such that the y-axis points downwards due to the visualization in draw_world.
 # Consider changing the coordinate system into a normal cartesian coordinate system.
@@ -139,16 +140,13 @@ while True:
     elif action == ord('q'): # Quit
         break
 
-
     # XXX: Make the robot drive
     # Read odometry, see how far we have moved, and update particles.
     # Or use motor controls to update particles
     # XXX: You do this
 
-
     # Fetch next frame
     colour, distorted = cam.get_colour()    
-    
     
     # Detect objects
     objectType, measured_distance, measured_angle, colourProb = cam.get_object(colour)
@@ -185,27 +183,29 @@ while True:
            else:
                lm = landmarks[1]
 
-           calculated_distance = (math.sqrt((particle.getX()+lm[0])**2 + ((particle.getY()+lm[1]))**2))
+           calculated_distance = (math.sqrt((particle.getX()-lm[0])**2 + ((particle.getY()-lm[1]))**2))
 
            if(calculated_distance < measured_distance):
                lol = rnd.randn(calculated_distance, sigma_distance)
-               if calculated_distance < 100:
-                   print "dist: ", calculated_distance
-                   print "LOL: ", lol
-               posWeight = abs(measured_distance - lol)
+               #if calculated_distance < 100:
+               #    print "dist: ", calculated_distance
+               #    print "LOL: ", lol
+               #posWeight = abs(measured_distance - lol)
                #posWeight = (1/math.sqrt(2*math.pi*sigma_distance**2))*math.exp(-1*(measured_distance-calculated_distance)**2/(2*sigma_distance**2))
-               #posWeight = measured_distance/calculated_distance
+               posWeight = measured_distance/calculated_distance
                angleWeight = measured_angle/particle.getTheta() 
            else:
                lol = rnd.randn(calculated_distance, sigma_distance)
-               posWeight = abs(measured_distance - lol)
+               #posWeight = abs(measured_distance - lol)
                #posWeight = (1/math.sqrt(2*math.pi*sigma_distance**2))*math.exp(-1*(measured_distance-calculated_distance)**2/(2*sigma_distance**2))
                #posWeight = measured_distance - rnd.randn(calculated_distance, sigma_distance**2)
-               #posWeight = calculatedPos/measured_distance
+               posWeight = calculated_distance/measured_distance
                angleWeight = particle.getTheta()/measured_angle
 
-           particle.setWeight(posWeight) 
-           weight_sum += abs(posWeight)
+           particle.setWeight(posWeight)
+           if particle.getWeight() < 0 or calculated_distance < 0:
+               print "WHAT", particle.getWeight(), calculated_distance
+           weight_sum += posWeight 
 
         #weight_sum = 0
         #for particle in particles:
@@ -226,8 +226,10 @@ while True:
 
         #    weight_sum += newWeight 
 
+        normsum = 0
         for particle in particles:
            particle.setWeight(particle.getWeight()/weight_sum) 
+           normsum += particle.getWeight() 
            if particle.getWeight() > 0.1:
                print "Particle: ", particle.getWeight()
 
@@ -248,14 +250,14 @@ while True:
             tsum += w
             cumsum.append(tsum)
 
-        print "Sum of weights: ", cumsum[-1]
+        print "Sum of weights: ", cumsum[-1], " or ", normsum
         
         #resample_n = 1000
         for i in range(len(particles)):
            sample = np.random.ranf()
            for j in range(1, len(particles)):
                if sample >= cumsum[j-1] and sample < cumsum[j]:
-                   particles[i] = particles[j]
+                   particles[i] = copy.deepcopy(particles[j])
         
         # Draw detected pattern
         cam.draw_object(colour)
@@ -265,7 +267,7 @@ while True:
         for p in particles:
             p.setWeight(1.0/num_particles)
 
-    par.add_uncertainty(particles, 1.0, 0.05)
+    #par.add_uncertainty(particles, 1.0, 0.05)
 
     
     est_pose = par.estimate_pose(particles) # The estimate of the robots current pose
