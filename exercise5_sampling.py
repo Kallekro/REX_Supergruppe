@@ -3,6 +3,7 @@ import particle as par
 import camera
 import numpy as np
 import math
+import random_numbers as rnd
 
 # TODO: The coordinate system is such that the y-axis points downwards due to the visualization in draw_world.
 # Consider changing the coordinate system into a normal cartesian coordinate system.
@@ -19,7 +20,7 @@ CWHITE = (255, 255, 255)
 CBLACK = (0, 0, 0)
 
 sigma_distance= 25.0 # chose a number
-sigma_theta=1.0
+sigma_theta=2.0
 
 # Landmarks.
 # The robot knows the position of 2 landmarks. Their coordinates are in cm.
@@ -121,7 +122,6 @@ print "Opening and initializing camera"
 cam = camera.Camera(0, 'arlo')
 
 while True:
-
     # Move the robot according to user input (for testing)
     action = cv2.waitKey(10)
     
@@ -180,27 +180,32 @@ while True:
         for particle in particles:
            posWeight = 0;
            angleWeight = 0;
-           if(objectType == 'horizontal'):
-               # TODO:
-               calculatedPos = (math.sqrt(particle.getX()**2 + particle.getY()**2)) # MAYBE WRONG? koordinatsystem
-               if abs(measured_distance - calculatedPos) < 10:
-                   print "Meas: {0}\nCalc: {1}".format(measured_distance, calculatedPos)
-               if(calculatedPos < measured_distance):
-                   PosWeight = measured_distance/calculatedPos
-                   angleWeight = measured_angle/particle.getTheta() 
-               else:
-                   posWeight = calculatedPos/measured_distance
-                   angleWeight = particle.getTheta()/measured_angle
-           elif(objectType == 'vertical'):
-               calculatedPos = (math.sqrt((particle.getX()-300)**2 + particle.getY()**2))
-               if(calculatedPos < measured_distance):
-                   posWeight = measured_distance/calculatedPos
-                   angleWeight = measured_angle/particle.getTheta()
-               else:
-                   posWeight = calculatedPos/measured_distance #F(x) - sande billede, g(x) - partikel billede
-                   angleWeight = particle.getTheta()/measured_angle
+           if objectType == 'horizontal':
+               lm = landmarks[0]
+           else:
+               lm = landmarks[1]
+
+           calculated_distance = (math.sqrt((particle.getX()+lm[0])**2 + ((particle.getY()+lm[1]))**2))
+
+           if(calculated_distance < measured_distance):
+               lol = rnd.randn(calculated_distance, sigma_distance)
+               if calculated_distance < 100:
+                   print "dist: ", calculated_distance
+                   print "LOL: ", lol
+               posWeight = abs(measured_distance - lol)
+               #posWeight = (1/math.sqrt(2*math.pi*sigma_distance**2))*math.exp(-1*(measured_distance-calculated_distance)**2/(2*sigma_distance**2))
+               #posWeight = measured_distance/calculated_distance
+               angleWeight = measured_angle/particle.getTheta() 
+           else:
+               lol = rnd.randn(calculated_distance, sigma_distance)
+               posWeight = abs(measured_distance - lol)
+               #posWeight = (1/math.sqrt(2*math.pi*sigma_distance**2))*math.exp(-1*(measured_distance-calculated_distance)**2/(2*sigma_distance**2))
+               #posWeight = measured_distance - rnd.randn(calculated_distance, sigma_distance**2)
+               #posWeight = calculatedPos/measured_distance
+               angleWeight = particle.getTheta()/measured_angle
+
            particle.setWeight(posWeight) 
-           weight_sum += posWeight
+           weight_sum += abs(posWeight)
 
         #weight_sum = 0
         #for particle in particles:
@@ -221,10 +226,10 @@ while True:
 
         #    weight_sum += newWeight 
 
-        norm_sum = 0 
         for particle in particles:
            particle.setWeight(particle.getWeight()/weight_sum) 
-           norm_sum += particle.getWeight()
+           if particle.getWeight() > 0.1:
+               print "Particle: ", particle.getWeight()
 
         # Resampling
         # XXX: You do this
@@ -243,9 +248,7 @@ while True:
             tsum += w
             cumsum.append(tsum)
 
-        print norm_sum
-
-        print cumsum[-1]
+        print "Sum of weights: ", cumsum[-1]
         
         #resample_n = 1000
         for i in range(len(particles)):
@@ -254,16 +257,16 @@ while True:
                if sample >= cumsum[j-1] and sample < cumsum[j]:
                    particles[i] = particles[j]
         
-                   
-
         # Draw detected pattern
         cam.draw_object(colour)
+
     else:
         # No observation - reset weights to uniform distribution
         for p in particles:
             p.setWeight(1.0/num_particles)
 
-    par.add_uncertainty(particles, sigma_distance/10.0, sigma_theta/10.0)
+    par.add_uncertainty(particles, 1.0, 0.05)
+
     
     est_pose = par.estimate_pose(particles) # The estimate of the robots current pose
 
