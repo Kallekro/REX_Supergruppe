@@ -91,7 +91,6 @@ cv2.namedWindow(WIN_World);
 cv2.moveWindow(WIN_World, 500       , 50);
 
 
-
 # Initialize particles
 num_particles = 1000
 particles = []
@@ -139,7 +138,6 @@ while True:
     elif action == ord('q'): # Quit
         break
 
-    
     # XXX: Make the robot drive
     
     for particle in particles:
@@ -179,7 +177,7 @@ while True:
         # with the pos (300,0), therefore we need to subtrac 300, from the particles
         # That is over there, to get the true distance from the landmark!!!!
         #Weight calculated from hint 6 formulaes
-         
+
         weight_sum = 0.0
         for particle in particles:
            posWeight = 0;
@@ -191,21 +189,15 @@ while True:
 
            calculated_distance = (math.sqrt((particle.getX()-lm[0])**2 + ((particle.getY()-lm[1]))**2))
 
-           
            posWeight = (1/math.sqrt(2*math.pi*sigma_distance**2))*math.exp(-1*(measured_distance-calculated_distance)**2/(2*sigma_distance**2))
 
            phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - (particle.getTheta())
-               
-                                                                                     
-           if particle.getY() < 0:
-               angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1*((measured_angle-phi)**2/(2*sigma_theta**2)))
-           else:
-               angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1*((measured_angle-phi)**2/(2*sigma_theta**2)))
-               
+           angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1*((measured_angle-phi)**2/(2*sigma_theta**2)))
+
            particle.setWeight(posWeight*angleWeight)
            weight_sum += posWeight*angleWeight 
-           
-        cumsum = [0.0]
+
+           cumsum = [0.0]
         tsum = 0
         for i in particles:
             w = i.getWeight() / weight_sum
