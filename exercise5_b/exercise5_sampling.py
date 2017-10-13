@@ -192,15 +192,11 @@ while True:
 
            phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - particle.getTheta()
 
-           if particle.getY() < 0 and lm[0] < particle.getX():
-               phi = -0.5*np.pi - phi
-           elif particle.getY() < 0 and lm[0] >= particle.getX():               
-               phi = phi
+           angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1* (((measured_angle-phi)**2)/(2*sigma_theta**2)))
 
-               angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1* (((measured_angle-phi)**2)/(2*sigma_theta**2)))
+           particle.setWeight(posWeight*angleWeight)
+           weight_sum += posWeight * angleWeight           
 
-           particle.setWeight(posWeight)
-           weight_sum += posWeight           
         cumsum = [0.0]
         tsum = 0
         for i in particles:
