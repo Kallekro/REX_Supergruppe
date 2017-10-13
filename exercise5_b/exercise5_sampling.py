@@ -92,7 +92,7 @@ cv2.moveWindow(WIN_World, 500       , 50);
 
 
 # Initialize particles
-num_particles = 1000
+num_particles = 750
 particles = []
 for i in range(num_particles):
     # Random starting points. (x,y) \in [-1000, 1000]^2, theta \in [-pi, pi].
@@ -139,7 +139,6 @@ while True:
         break
 
     # XXX: Make the robot drive
-    
     for particle in particles:
         dx = np.cos(particle.getTheta())*velocity
         dy = np.sin(particle.getTheta())*velocity
@@ -191,20 +190,23 @@ while True:
 
            posWeight = (1/math.sqrt(2*math.pi*sigma_distance**2))*math.exp(-1*(measured_distance-calculated_distance)**2/(2*sigma_distance**2))
 
-           phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - (particle.getTheta())
-           angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1*((measured_angle-phi)**2/(2*sigma_theta**2)))
+           phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - particle.getTheta()
 
-           particle.setWeight(posWeight*angleWeight)
-           weight_sum += posWeight*angleWeight 
+           if particle.getY() < 0 and lm[0] < particle.getX():
+               phi = -0.5*np.pi - phi
+           elif particle.getY() < 0 and lm[0] >= particle.getX():               
+               phi = phi
 
-           cumsum = [0.0]
+               angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1* (((measured_angle-phi)**2)/(2*sigma_theta**2)))
+
+           particle.setWeight(posWeight)
+           weight_sum += posWeight           
+        cumsum = [0.0]
         tsum = 0
         for i in particles:
             w = i.getWeight() / weight_sum
             tsum += w
             cumsum.append(tsum)
-
-
             
         samples = []
         #resample_n = 1000
@@ -226,7 +228,7 @@ while True:
         for p in particles:
             p.setWeight(1.0/num_particles)
 
-    par.add_uncertainty(particles, 8.0, 0.1)
+    par.add_uncertainty(particles, 5.0, 0.2)
 
     
     est_pose = par.estimate_pose(particles) # The estimate of the robots current pose
