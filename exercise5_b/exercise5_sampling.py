@@ -138,8 +138,8 @@ while True:
     elif action == ord('q'): # Quit
         break
     
-
     # XXX: Make the robot drive
+    
     for particle in particles:
         dx = np.cos(particle.getTheta())*velocity
         dy = np.sin(particle.getTheta())*velocity
@@ -231,7 +231,7 @@ while True:
         for p in particles:
             p.setWeight(1.0/num_particles)
 
-    par.add_uncertainty(particles, 10.0, 0.2)
+    par.add_uncertainty(particles, 7.5, 0.15)
 
     
     est_pose = par.estimate_pose(particles) # The estimate of the robots current pose
