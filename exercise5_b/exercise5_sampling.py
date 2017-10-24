@@ -153,13 +153,13 @@ while True:
     if arlo_go and lastSeenLM != None:
         # Turn towards landmark
         if lastMeasuredAngle > 0:
-            arlo.go_diff(80, 79, 1, 0)
+            arlo.go_diff(40, 39, 1, 0)
         elif lastMeasuredAngle < 0:
-            arlo.go_diff(80, 79, 0, 1)
+            arlo.go_diff(40, 39, 0, 1)
 
         eps = 0.1
         if lastMeasuredAngle < 0-eps or lastMeasuredAngle > 0+eps:
-            arlo.sleep(abs(lastMeasuredAngle)/rotationInOneSecond)
+            sleep(abs(lastMeasuredAngle)/rotationInOneSecond)
             arlo.stop()
 
         # Drive forward
