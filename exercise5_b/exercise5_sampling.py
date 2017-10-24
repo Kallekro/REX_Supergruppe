@@ -110,7 +110,9 @@ angular_velocity = 0.0; # radians/sec
 # Initialize the robot (XXX: You do this)
 arlo = robot.Robot()
 lastSeenLM = None
-distInOneSecond = 50
+lastMeasuredAngle = 0
+translationInOneSecond = 50
+rotationInOneSecond = math.pi * 2 * 0.1 # Full rotation times something 
 
 # Allocate space for world map
 world = np.zeros((500,500,3), dtype=np.uint8)
@@ -149,10 +151,24 @@ while True:
     # XXX: Make the robot drive
     
     if arlo_go and lastSeenLM != None:
+        # Turn towards landmark
+        if lastMeasuredAngle > 0:
+            arlo.go_diff(80, 79, 1, 0)
+        elif lastMeasuredAngle < 0:
+            arlo.go_diff(80, 79, 0, 1)
+
+        eps = 0.1
+        if lastMeasuredAngle < 0-eps or lastMeasuredAngle > 0+eps:
+            arlo.sleep(abs(lastMeasuredAngle)/rotationInOneSecond)
+            arlo.stop()
+
+        # Drive forward
         dist = math.sqrt((lastSeenLM[0] - est_pose.getX())**2 + (lastSeenLM[1] - est_pose.getY())**2) 
         arlo.go_diff(80, 79, 1, 1)
-        sleep(dist/distInOneSecond)
+        if dist - 25 > 0:
+            sleep((dist - 25)/translationInOneSecond)
         arlo.stop()
+
 
     # Move particles
     for particle in particles:
@@ -199,6 +215,7 @@ while True:
             lm = landmarks[1]
 
         lastSeenLM = lm
+        lastMeasuredAngle = measured_angle
 
         weight_sum = 0.0
         for particle in particles:
@@ -244,6 +261,7 @@ while True:
         cam.draw_object(colour)
 
     else:
+        lastSeenLM = None
         # No observation - reset weights to uniform distribution
         for p in particles:
             p.setWeight(1.0/num_particles)
