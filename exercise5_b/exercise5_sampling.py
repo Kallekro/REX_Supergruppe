@@ -112,7 +112,7 @@ arlo = robot.Robot()
 lastSeenLM = None
 lastMeasuredAngle = 0
 translationInOneSecond = 50
-rotationInOneSecond = math.pi * 2 * 0.1 # Full rotation times something 
+rotationInOneSecond = 1.13826 # Full rotation times something 
 
 # Allocate space for world map
 world = np.zeros((500,500,3), dtype=np.uint8)
