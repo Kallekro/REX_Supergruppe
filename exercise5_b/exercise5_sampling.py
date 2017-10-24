@@ -147,7 +147,7 @@ while True:
     
     # XXX: Make the robot drive
     
-    if arlo_go && lastSeenLM != None:
+    if arlo_go and lastSeenLM != None:
         dist = math.sqrt((lastSeenLM[0] - est_pos.posX())**2 + (lastSeenLM[1] - est_pose.posY())**2) 
         arlo.go_diff(80, 79, 1, 1)
         sleep(dist/distInOneSecond)
