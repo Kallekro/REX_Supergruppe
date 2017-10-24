@@ -5,6 +5,7 @@ import numpy as np
 import math
 import random_numbers as rnd
 import copy
+import robot
 
 # TODO: The coordinate system is such that the y-axis points downwards due to the visualization in draw_world.
 # Consider changing the coordinate system into a normal cartesian coordinate system.
@@ -26,7 +27,6 @@ sigma_theta=1.0
 # Landmarks.
 # The robot knows the position of 2 landmarks. Their coordinates are in cm.
 landmarks = [(0.0, 0.0), (300.0, 0.0)]
-
 
 def jet(x):
     """Colour map for drawing particles. This function determines the colour of 
@@ -107,6 +107,9 @@ velocity = 0.0; # cm/sec
 angular_velocity = 0.0; # radians/sec
 
 # Initialize the robot (XXX: You do this)
+arlo = robot.Robot()
+lastSeenLM = None
+distInOneSecond = 50
 
 # Allocate space for world map
 world = np.zeros((500,500,3), dtype=np.uint8)
@@ -137,9 +140,19 @@ while True:
         angular_velocity += 0.2;
     elif action == ord('q'): # Quit
         break
+    elif action == ord('g'): # GO
+        arlo_go = True
+    else:
+        arlo_go = False
     
     # XXX: Make the robot drive
     
+    if arlo_go && lastSeenLM != None:
+        dist = math.sqrt((lastSeenLM[0] - est_pos.posX())**2 + (lastSeenLM[1] - est_pose.posY())**2) 
+        arlo.go_diff(80, 79, 1, 1)
+        sleep(dist/distInOneSecond)
+
+    # Move particles
     for particle in particles:
         dx = np.cos(particle.getTheta())*velocity
         dy = np.sin(particle.getTheta())*velocity
@@ -178,14 +191,17 @@ while True:
         # That is over there, to get the true distance from the landmark!!!!
         #Weight calculated from hint 6 formulaes
 
+        if objectType == 'horizontal':
+            lm = landmarks[0]
+        else:
+            lm = landmarks[1]
+
+        lastSeenLM = lm
+
         weight_sum = 0.0
         for particle in particles:
            posWeight = 0;
            angleWeight = 0;
-           if objectType == 'horizontal':
-               lm = landmarks[0]
-           else:
-               lm = landmarks[1]
 
            calculated_distance = (math.sqrt((particle.getX()-lm[0])**2 + ((particle.getY()-lm[1]))**2))
 
@@ -197,7 +213,6 @@ while True:
                p_theta = math.pi*2 - p_theta
            
            phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - p_theta
-#           measured_angle_world = measured_angle + particle.getTheta()
            
            angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1* (((measured_angle-phi)**2)/(2*sigma_theta**2)))
 
