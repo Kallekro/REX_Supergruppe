@@ -6,6 +6,7 @@ import math
 import random_numbers as rnd
 import copy
 import robot
+from time import sleep
 
 # TODO: The coordinate system is such that the y-axis points downwards due to the visualization in draw_world.
 # Consider changing the coordinate system into a normal cartesian coordinate system.
