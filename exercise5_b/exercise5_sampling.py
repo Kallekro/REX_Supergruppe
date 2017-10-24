@@ -151,6 +151,7 @@ while True:
         dist = math.sqrt((lastSeenLM[0] - est_pose.posX())**2 + (lastSeenLM[1] - est_pose.posY())**2) 
         arlo.go_diff(80, 79, 1, 1)
         sleep(dist/distInOneSecond)
+        arlo.stop()
 
     # Move particles
     for particle in particles:
