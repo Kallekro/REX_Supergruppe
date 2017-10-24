@@ -25,7 +25,7 @@ sigma_theta=1.0
 
 # Landmarks.
 # The robot knows the position of 2 landmarks. Their coordinates are in cm.
-landmarks = [(0.0, 0.0), (100.0, 0.0)]
+landmarks = [(0.0, 0.0), (300.0, 0.0)]
 
 
 def jet(x):
@@ -92,7 +92,7 @@ cv2.moveWindow(WIN_World, 500       , 50);
 
 
 # Initialize particles
-num_particles = 750
+num_particles = 250 
 particles = []
 for i in range(num_particles):
     # Random starting points. (x,y) \in [-1000, 1000]^2, theta \in [-pi, pi].
@@ -137,6 +137,7 @@ while True:
         angular_velocity += 0.2;
     elif action == ord('q'): # Quit
         break
+    
 
     # XXX: Make the robot drive
     for particle in particles:
@@ -190,12 +191,18 @@ while True:
 
            posWeight = (1/math.sqrt(2*math.pi*sigma_distance**2))*math.exp(-1*(measured_distance-calculated_distance)**2/(2*sigma_distance**2))
 
-           phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - particle.getTheta()
+           p_theta = particle.getTheta()
 
+           if particle.getY() < 0:
+               p_theta = math.pi*2 - p_theta
+           
+           phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - p_theta
+#           measured_angle_world = measured_angle + particle.getTheta()
+           
            angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1* (((measured_angle-phi)**2)/(2*sigma_theta**2)))
 
            particle.setWeight(posWeight*angleWeight)
-           weight_sum += posWeight * angleWeight           
+           weight_sum += posWeight*angleWeight            
 
         cumsum = [0.0]
         tsum = 0
@@ -224,7 +231,7 @@ while True:
         for p in particles:
             p.setWeight(1.0/num_particles)
 
-    par.add_uncertainty(particles, 5.0, 0.2)
+    par.add_uncertainty(particles, 10.0, 0.2)
 
     
     est_pose = par.estimate_pose(particles) # The estimate of the robots current pose
