@@ -116,9 +116,11 @@ angular_velocity = 0.0; # radians/sec
 # Initialize the robot (XXX: You do this)
 arlo = robot.Robot()
 lastSeenLM = None
+LMInSight = False
 lastMeasuredAngle = 0
 translationInOneSecond = 50
 rotationInOneSecond = 1.13826 
+weightMean = 0
 
 # Allocate space for world map
 world = np.zeros((500,500,3), dtype=np.uint8)
@@ -155,8 +157,7 @@ while True:
         arlo_go = False
     
     # XXX: Make the robot drive
-    
-    if arlo_go and lastSeenLM != None:
+    if weightMean > 0.6 and LMInSight:
         # Turn towards landmark
         if lastMeasuredAngle > 0:
             arlo.go_diff(30, 29, 0, 1)
@@ -169,24 +170,46 @@ while True:
             arlo.stop()
 
         # Drive forward
-        dist = math.sqrt((lastSeenLM[0] - est_pose.getX())**2 + (lastSeenLM[1] - est_pose.getY())**2) 
-        arlo.go_diff(80, 79, 1, 1)
-        driving_dist=dist/2# - 25
-        if driving_dist > 0:
-            sleep(driving_dist/translationInOneSecond)
-        arlo.stop()
         
+        arlo.go_diff(80, 79, 1, 1)
+        
+        dist = math.sqrt((lastSeenLM[0] - est_pose.getX())**2 + (lastSeenLM[1] - est_pose.getY())**2) 
+        driving_dist=dist/2# - 25
+        
+        t = driving_dist/translationInOneSecond
+        dt = t / 10.0
+        current_time = 0
+        while current_time < t:
+            current_time += dt
+            
+            stop_dist = 30
+            if arlo.read_sensor(0) < stop_dist or arlo.read_sensor(2) < stop_dist or arlo.read_sensor(3) < stop_dist: 
+                arlo.stop()
+                break
+          
+          sleep(dt)
+
+        actual_driven_dist = current_time * translationInOneSecond
+
+        #if driving_dist > 0:
+        #    sleep(driving_dist/translationInOneSecond)
+        #arlo.stop()
+        
+        # Move particles
         for particle in particles: 
-            dx=deltaX(particle.getTheta(),driving_dist )
-            dy=deltaY(particle.getTheta(),driving_dist )
-            par.move_particle(particle, dx, dy, lastMeasuredAngle)
+            dx=deltaX(particle.getTheta(),actual_driven_dist)
+            dy=deltaY(particle.getTheta(),actual_driven_dist)
+            par.move_particle(particle, dx, -dy, lastMeasuredAngle)
+    else if !LMInSight:
+        # rotate 
+        arlo.go_diff(30, 29, 0, 1)
+        sleep((math.pi * 0.25) / rotationInOneSecond)
+        
 
-
-    # Move particles
-    for particle in particles:
-        dx = np.cos(particle.getTheta())*velocity
-        dy = np.sin(particle.getTheta())*velocity
-        par.move_particle(particle, dx, -dy, angular_velocity)
+    #for particle in particles:
+    #    dx = np.cos(particle.getTheta())*velocity
+    #    dy = np.sin(particle.getTheta())*velocity
+    #    par.move_particle(particle, dx, -dy, angular_velocity)
         
     # Read odometry, see how far we have moved, and update particles.
     # Or use motor controls to update particles
@@ -227,6 +250,7 @@ while True:
             lm = landmarks[1]
 
         lastSeenLM = lm
+        LMInSight = True
         lastMeasuredAngle = measured_angle
 
         weight_sum = 0.0
@@ -256,7 +280,9 @@ while True:
             w = i.getWeight() / weight_sum
             tsum += w
             cumsum.append(tsum)
-            
+
+        weightMean = tsum / len(particles)
+
         samples = []
         #resample_n = 1000
         while len(samples) != len(particles):
@@ -273,7 +299,7 @@ while True:
         cam.draw_object(colour)
 
     else:
-        lastSeenLM = None
+        LMInsight = False
         # No observation - reset weights to uniform distribution
         for p in particles:
             p.setWeight(1.0/num_particles)
