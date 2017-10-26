@@ -29,6 +29,12 @@ sigma_theta=1.0
 # The robot knows the position of 2 landmarks. Their coordinates are in cm.
 landmarks = [(0.0, 0.0), (300.0, 0.0)]
 
+def deltaX(Theta,DrivenDistance):
+	return np.cos(Theta*180/np.pi)*DrivenDistance
+
+def deltaY(Theta,DrivenDistance):
+	return np.sin(Theta*180/np.pi)*DrivenDistance
+
 def jet(x):
     """Colour map for drawing particles. This function determines the colour of 
     a particle from its weight."""
@@ -112,7 +118,7 @@ arlo = robot.Robot()
 lastSeenLM = None
 lastMeasuredAngle = 0
 translationInOneSecond = 50
-rotationInOneSecond = 1.13826 # Full rotation times something 
+rotationInOneSecond = 1.13826 
 
 # Allocate space for world map
 world = np.zeros((500,500,3), dtype=np.uint8)
@@ -153,21 +159,27 @@ while True:
     if arlo_go and lastSeenLM != None:
         # Turn towards landmark
         if lastMeasuredAngle > 0:
-            arlo.go_diff(40, 39, 1, 0)
+            arlo.go_diff(30, 29, 0, 1)
         elif lastMeasuredAngle < 0:
-            arlo.go_diff(40, 39, 0, 1)
+            arlo.go_diff(30, 29, 1, 0)
 
-        eps = 0.1
+        eps = 0.01
         if lastMeasuredAngle < 0-eps or lastMeasuredAngle > 0+eps:
-            sleep(abs(lastMeasuredAngle)/rotationInOneSecond)
+            sleep((abs(lastMeasuredAngle)) / rotationInOneSecond)
             arlo.stop()
 
         # Drive forward
         dist = math.sqrt((lastSeenLM[0] - est_pose.getX())**2 + (lastSeenLM[1] - est_pose.getY())**2) 
         arlo.go_diff(80, 79, 1, 1)
-        if dist - 25 > 0:
-            sleep((dist - 25)/translationInOneSecond)
+        driving_dist=dist/2# - 25
+        if driving_dist > 0:
+            sleep(driving_dist/translationInOneSecond)
         arlo.stop()
+        
+        for particle in particles: 
+            dx=deltaX(particle.getTheta(),driving_dist )
+            dy=deltaY(particle.getTheta(),driving_dist )
+            par.move_particle(particle, dx, dy, lastMeasuredAngle)
 
 
     # Move particles
