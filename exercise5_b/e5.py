@@ -28,7 +28,7 @@ sigma_theta=1.0
 
 # Landmarks.
 # The robot knows the position of 2 landmarks. Their coordinates are in cm.
-landmarks = [(0.0, 0.0), (100.0, 0.0)]
+landmarks = [(0.0, 0.0), (200.0, 0.0)]
 
 def deltaX(Theta,DrivenDistance):
 	return np.cos(Theta*180/np.pi)*DrivenDistance
@@ -120,9 +120,10 @@ lastSeenLM = None
 LMInSight = False
 lastMeasuredAngle = 0
 translationInOneSecond = 100 
-rotationInOneSecond = 1.13826 
+rotationInOneSecond = 0.73 #0.qqaw79 # 1.13826 
 weightMean = 0
 visitedLM = [False, False]
+turn_counter = 0
 
 # Allocate space for world map
 world = np.zeros((500,500,3), dtype=np.uint8)
@@ -137,6 +138,14 @@ print "Opening and initializing camera"
 cam = camera.Camera(0, 'arlo')
 
 while True:
+    #if visitedLM[0] and visitedLM[1]:
+    #  # VICTORY
+    #  arlo.go_diff(80, 79, 1, 0)
+    #  sleep(2)
+    #  arlo.stop()
+    #  while cv2.waitKey(15) != ord('q'):
+    #    continue 
+    #  break
     # Move the robot according to user input (for testing)
     action = cv2.waitKey(15)
     
@@ -256,6 +265,7 @@ while True:
 
     par.add_uncertainty(particles, 5, 0.15)
 
+    
     est_pose = par.estimate_pose(particles) # The estimate of the robots current pose
 
     print "In sight = {0}".format(LMInSight)
@@ -264,6 +274,7 @@ while True:
 
     # XXX: Make the robot drive
     if weightMean > 0.6 and LMInSight and not visitedLM[lastSeenLM]:
+        turn_counter = 0
         # Turn towards landmark
         if lastMeasuredAngle > 0:
             arlo.go_diff(30, 29, 0, 1)
@@ -282,14 +293,15 @@ while True:
             driving_dist /= 2
         
         actual_driven_dist = 0
-        t = driving_dist/translationInOneSecond
-        dt = t / 30.0 + 0.05
+        satefy_dist=100
+        t = (driving_dist-satefy_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
+        dt = t / 1000.0 
         current_time = 0
         while current_time < t:
             current_time += dt
             actual_driven_dist += dt*translationInOneSecond 
     
-            stop_dist = 300
+            stop_dist = 200
             sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
             print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
             if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
@@ -305,7 +317,7 @@ while True:
         print "Actual dist: ", actual_driven_dist, " - Total dist: ", driving_dist
         print "Dist diff: ", driving_dist - actual_driven_dist
 
-        if driving_dist - actual_driven_dist < 5:
+        if abs(driving_dist - actual_driven_dist-satefy_dist) < 35:
             visitedLM[lastSeenLM] = True
 
         LMInSight = False
@@ -316,19 +328,88 @@ while True:
         
         # Move particles
        # for particle in particles: 
-       #     dx=deltaX(particle.getTheta(),actual_driven_dist)
+       #     dx=delt(paXarticle.getTheta(),actual_driven_dist)
        #     dy=deltaY(particle.getTheta(),actual_driven_dist)
        #     par.move_particle(particle, dx, -dy, lastMeasuredAngle)
         for particle in particles:
             dx = np.cos(particle.getTheta())*actual_driven_dist
             dy = np.sin(particle.getTheta())*actual_driven_dist
-            par.move_particle(particle, dx, -dy, angular_velocity)
+            par.move_particle(particle, dx, -dy, 0)
+ 
+    elif not LMInSight or (LMInSight and visitedLM[lastSeenLM]) and not (visitedLM[0] and visitedLM[1]):
 
-    elif not LMInSight or (LMInSight and visitedLM[lastSeenLM]):
-        # rotate 
-        arlo.go_diff(30, 29, 0, 1)
-        sleep((math.pi * 0.275) / rotationInOneSecond)
-        arlo.stop()
+        if turn_counter < 8:
+            turn_counter += 1
+            print 'Turning around. Number of turns:', turn_counter
+
+            # rotate 
+            arlo.go_diff(30, 29, 0, 1)
+            sleep((math.pi * 0.25) / rotationInOneSecond)
+            arlo.stop()
+            for particle in particles:
+                par.move_particle(particle, 0, 0, -(math.pi * 0.25) / rotationInOneSecond)
+                
+                
+        elif visitedLM[0] or visitedLM[1]: # Going around a box. Explore
+        
+            print 'Trying to go around a box in front of me'
+            arlo.go_diff(80, 79, 0, 0)
+            sleep(0.25)
+            
+            arlo.go_diff(30, 29, 1, 0)
+            sleep((math.pi * 0.30) / rotationInOneSecond)
+            
+            
+            driving_dist=30
+            t = driving_dist/translationInOneSecond
+            dt = t / 100.0 + 0.05
+            current_time = 0
+            stop_dist = 200
+            while current_time < t:
+                current_time += dt
+    
+                sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
+                print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
+                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
+                    arlo.stop()
+                    LMInSight = False
+                    print "Sensor stopp!"
+                    break
+                arlo.go_diff(80, 79, 1, 1)
+                sleep(dt)
+            arlo.stop()
+        
+        
+            arlo.go_diff(30, 29, 0, 1)
+            sleep((math.pi * 0.45) / rotationInOneSecond)
+            arlo.stop()
+            
+            
+            driving_dist=70
+            t = driving_dist/translationInOneSecond
+            dt = t / 100.0 + 0.05
+            current_time = 0
+            stop_dist = 200
+            while current_time < t:
+                current_time += dt
+    
+                sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
+                print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
+                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
+                    arlo.stop()
+                    LMInSight = False
+                    print "Sensor stopp!"
+                    break
+                arlo.go_diff(80, 79, 1, 1)
+                sleep(dt)
+            arlo.stop()
+            
+            
+            for particle in particles:
+                dx = np.cos(particle.getTheta())*translationInOneSecond
+                dy = np.sin(particle.getTheta())*translationInOneSecond
+                par.move_particle(particle, dx, dy, -(math.pi * 0.50) / rotationInOneSecond)
+            turn_counter = 0
 
     # Draw map
     draw_world(est_pose, particles, world)
