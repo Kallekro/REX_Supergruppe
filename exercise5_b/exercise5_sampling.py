@@ -293,7 +293,7 @@ while True:
             driving_dist /= 2
         
         actual_driven_dist = 0
-        satefy_dist=40
+        satefy_dist=100
         t = (driving_dist-satefy_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
         dt = t / 1000.0 
         current_time = 0
