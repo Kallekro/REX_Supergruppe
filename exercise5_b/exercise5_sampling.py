@@ -410,7 +410,54 @@ while True:
                 dy = np.sin(particle.getTheta())*translationInOneSecond
                 par.move_particle(particle, dx, dy, -(math.pi * 0.50) / rotationInOneSecond)
             turn_counter = 0
+            
+    #The purpose of the next function is get closer into the middel of the two boxes. So after the robot have droven
+    #half of the distance to the second box, the robot wil drive from its position into the middel of the virtual chart. 
+    if visitedLM[0] and visitedLM[1]: #Actiated if the robot have visited both boxes
+        x_end=est_pose.getX() # the X,Y coordinates of the average of all the particles and the average orritatin (theta_end) of them
+        y_end=est_pose.getY()
+        theta_end=est_pose.getTheta() 
+        end_target=[(landmarks[0][0]+landmarks[1][0])/2, (landmarks[0][1]+landmarks[1][1])/2] #The coordinates for the middel
+        # of the two boxes will be around  (100,0 )
+        phi_end=math.atan(y_end/(x_end-end_target[0])) #The angel between the robot and the end_target (if the robot was facing directely east)
+        rotation_end=phi_end-theta_end #Since the robot already is orintated in a direction theta_end, this is taking into account 
+        #when calculating how much, the robot has to rotate in order to face the target_end. 
+        
+        if rotation_end <0:
+            arlo.go_diff(30, 29, 0, 1)
+            sleep((rotation_end) / rotationInOneSecond)
+            arlo.stop()
+        if rotation_end >0:
+            arlo.go_diff(30, 29, 1, 0)
+            sleep((rotation_end) / rotationInOneSecond)
+            arlo.stop()
+    
+        target_distance=(x_end-end_target[0])**2+ y_end**2  #The distance from the robot to the target_end is caculated using pythagoras
+        
+        #The rest of the code is what we useally do when driving forward.
+        actual_driven_dist = 0
+        t = (target_distance)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
+        dt = t / 1000.0     
+        current_time = 0
+        stop_dist = 200
 
+        while current_time < t:
+            current_time += dt
+            actual_driven_dist += dt*translationInOneSecond 
+    
+            sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
+            print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
+            if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
+                arlo.stop()
+                LMInSight = False
+                print "Sensor stopp!"
+                break
+          
+            arlo.go_diff(80, 79, 1, 1)
+            sleep(dt)
+        arlo.stop()
+        print 'actual_driven_dist=',actual_driven_dist
+ 
     # Draw map
     draw_world(est_pose, particles, world)
     
