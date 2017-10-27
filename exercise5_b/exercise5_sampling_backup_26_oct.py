@@ -120,7 +120,7 @@ lastSeenLM = None
 LMInSight = False
 lastMeasuredAngle = 0
 translationInOneSecond = 100 
-rotationInOneSecond = 0.73 #0.qqaw79 # 1.13826 
+rotationInOneSecond = 0.79 # 1.13826 
 weightMean = 0
 visitedLM = [False, False]
 turn_counter = 0
@@ -293,9 +293,8 @@ while True:
             driving_dist /= 2
         
         actual_driven_dist = 0
-        satefy_dist=40
-        t = (driving_dist-satefy_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
-        dt = t / 1000.0 
+        t = driving_dist/translationInOneSecond
+        dt = t / 100.0 + 0.05
         current_time = 0
         while current_time < t:
             current_time += dt
@@ -317,7 +316,7 @@ while True:
         print "Actual dist: ", actual_driven_dist, " - Total dist: ", driving_dist
         print "Dist diff: ", driving_dist - actual_driven_dist
 
-        if abs(driving_dist - actual_driven_dist-satefy_dist) < 35:
+        if abs(driving_dist - actual_driven_dist) < 35:
             visitedLM[lastSeenLM] = True
 
         LMInSight = False
@@ -340,71 +339,23 @@ while True:
 
         if turn_counter < 8:
             turn_counter += 1
-            print 'Turning around. Number of turns:', turn_counter
-
             # rotate 
             arlo.go_diff(30, 29, 0, 1)
             sleep((math.pi * 0.25) / rotationInOneSecond)
             arlo.stop()
             for particle in particles:
                 par.move_particle(particle, 0, 0, -(math.pi * 0.25) / rotationInOneSecond)
-                
-                
-        elif visitedLM[0] or visitedLM[1]: # Going around a box. Explore
-        
-            print 'Trying to go around a box in front of me'
-            arlo.go_diff(80, 79, 0, 0)
-            sleep(0.25)
+        elif visitedLM[0] or visitedLM[1]: # Explore
             
             arlo.go_diff(30, 29, 1, 0)
-            sleep((math.pi * 0.30) / rotationInOneSecond)
-            
-            
-            driving_dist=30
-            t = driving_dist/translationInOneSecond
-            dt = t / 100.0 + 0.05
-            current_time = 0
-            stop_dist = 200
-            while current_time < t:
-                current_time += dt
-    
-                sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
-                print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
-                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
-                    arlo.stop()
-                    LMInSight = False
-                    print "Sensor stopp!"
-                    break
-                arlo.go_diff(80, 79, 1, 1)
-                sleep(dt)
-            arlo.stop()
-        
-        
+            sleep((math.pi * 0.50) / rotationInOneSecond)
+            arlo.go_diff(80, 79, 1, 1)
+            sleep(1.5)
             arlo.go_diff(30, 29, 0, 1)
-            sleep((math.pi * 0.45) / rotationInOneSecond)
+            sleep(1)
             arlo.stop()
-            
-            
-            driving_dist=70
-            t = driving_dist/translationInOneSecond
-            dt = t / 100.0 + 0.05
-            current_time = 0
-            stop_dist = 200
-            while current_time < t:
-                current_time += dt
-    
-                sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
-                print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
-                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
-                    arlo.stop()
-                    LMInSight = False
-                    print "Sensor stopp!"
-                    break
-                arlo.go_diff(80, 79, 1, 1)
-                sleep(dt)
-            arlo.stop()
-            
-            
+            arlo.go_diff(80,79, 1, 1)            
+            sleep((math.pi*0.50) / rotationInOneSecond)
             for particle in particles:
                 dx = np.cos(particle.getTheta())*translationInOneSecond
                 dy = np.sin(particle.getTheta())*translationInOneSecond
