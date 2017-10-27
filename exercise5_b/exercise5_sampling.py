@@ -8,6 +8,8 @@ import random_numbers as rnd
 import copy
 import robot
 from time import sleep
+import time
+
 
 # TODO: The coordinate system is such that the y-axis points downwards due to the visualization in draw_world.
 # Consider changing the coordinate system into a normal cartesian coordinate system.
@@ -119,11 +121,12 @@ arlo = robot.Robot()
 lastSeenLM = None
 LMInSight = False
 lastMeasuredAngle = 0
-translationInOneSecond = 100 
+translationInOneSecond = 200 
 rotationInOneSecond = 0.73 #0.qqaw79 # 1.13826 
 weightMean = 0
 visitedLM = [False, False]
 turn_counter = 0
+foundMiddle = False
 
 # Allocate space for world map
 world = np.zeros((500,500,3), dtype=np.uint8)
@@ -285,52 +288,51 @@ while True:
         if lastMeasuredAngle < 0-eps or lastMeasuredAngle > 0+eps:
             sleep((abs(lastMeasuredAngle)) / rotationInOneSecond)
             arlo.stop()
-
-        # Drive forward
+                # Drive forward
+        safety_dist=40.0
         dist = math.sqrt((landmarks[lastSeenLM][0] - est_pose.getX())**2 + (landmarks[lastSeenLM][1] - est_pose.getY())**2) 
-        driving_dist = dist# - 35
+        print "DIST", dist
+        driving_dist = dist - safety_dist# - 35
         if visitedLM[0] or visitedLM[1]:
-            driving_dist /= 2
+            driving_dist /= 4
         
-        actual_driven_dist = 0
-        satefy_dist=100
-        t = (driving_dist-satefy_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
-        dt = t / 1000.0 
+        actual_driven_dist = 0  
+        t = (driving_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
+        dt = t/25.0 
         current_time = 0
+        c = 0
         while current_time < t:
-            current_time += dt
+            a = time.clock()
+            current_time += dt+c
             actual_driven_dist += dt*translationInOneSecond 
-    
-            stop_dist = 200
+            
+            stop_dist = 300
             sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
             print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
             if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
+                #arlo.stop()
+                #arlo.go_diff(80,79,0,0)
+                #sleep(0.15)
                 arlo.stop()
                 LMInSight = False
                 print "Sensor stopp!"
                 break
           
             arlo.go_diff(80, 79, 1, 1)
-            sleep(dt)
+            b = time.clock()
+            c = b-a
+            sleep(abs(dt-c))
         arlo.stop()
+        print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
 
         print "Actual dist: ", actual_driven_dist, " - Total dist: ", driving_dist
         print "Dist diff: ", driving_dist - actual_driven_dist
 
-        if abs(driving_dist - actual_driven_dist-satefy_dist) < 35:
+        if abs(driving_dist - actual_driven_dist) < 35:
             visitedLM[lastSeenLM] = True
 
-        LMInSight = False
-
-        #if driving_dist > 0:
-        #    sleep(driving_dist/translationInOneSecond)
-        #arlo.stop()
-        
-        # Move particles
-       # for particle in particles: 
-       #     dx=delt(paXarticle.getTheta(),actual_driven_dist)
-       #     dy=deltaY(particle.getTheta(),actual_driven_dist)
-       #     par.move_particle(particle, dx, -dy, lastMeasuredAngle)
+        LMinsight = False
+       
         for particle in particles:
             dx = np.cos(particle.getTheta())*actual_driven_dist
             dy = np.sin(particle.getTheta())*actual_driven_dist
@@ -362,12 +364,14 @@ while True:
             
             driving_dist=30
             t = driving_dist/translationInOneSecond
-            dt = t / 100.0 + 0.05
+            dt = t / 25.0
             current_time = 0
             stop_dist = 200
+            c = 0
             while current_time < t:
-                current_time += dt
-    
+                a = time.clock()
+                current_time += dt+c
+                
                 sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
                 print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
                 if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
@@ -376,7 +380,8 @@ while True:
                     print "Sensor stopp!"
                     break
                 arlo.go_diff(80, 79, 1, 1)
-                sleep(dt)
+                b = time.clock()
+                sleep(dt- (a-b))
             arlo.stop()
         
         
@@ -387,11 +392,13 @@ while True:
             
             driving_dist=70
             t = driving_dist/translationInOneSecond
-            dt = t / 100.0 + 0.05
+            dt = t / 25.0
             current_time = 0
             stop_dist = 200
+            c = 0
             while current_time < t:
-                current_time += dt
+                a = time.clock()
+                current_time += dt+c
     
                 sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
                 print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
@@ -401,7 +408,8 @@ while True:
                     print "Sensor stopp!"
                     break
                 arlo.go_diff(80, 79, 1, 1)
-                sleep(dt)
+                b = time.clock()
+                sleep(dt-(b-a))
             arlo.stop()
             
             
@@ -410,10 +418,19 @@ while True:
                 dy = np.sin(particle.getTheta())*translationInOneSecond
                 par.move_particle(particle, dx, dy, -(math.pi * 0.50) / rotationInOneSecond)
             turn_counter = 0
-            
+
+    draw_world(est_pose, particles, world)
+    # Show frame
+    cv2.imshow(WIN_RF1, colour);
+
+    # Show world
+    cv2.imshow(WIN_World, world);
+    print "LOOL"
+    #sleep(2)     
     #The purpose of the next function is get closer into the middel of the two boxes. So after the robot have droven
     #half of the distance to the second box, the robot wil drive from its position into the middel of the virtual chart. 
-    if visitedLM[0] and visitedLM[1]: #Actiated if the robot have visited both boxes
+    if visitedLM[0] and visitedLM[1] and not foundMiddle: #Actiated if the robot have visited both boxes
+        foundMiddle = True
         x_end=est_pose.getX() # the X,Y coordinates of the average of all the particles and the average orritatin (theta_end) of them
         y_end=est_pose.getY()
         theta_end=est_pose.getTheta() 
@@ -425,11 +442,11 @@ while True:
         
         if rotation_end <0:
             arlo.go_diff(30, 29, 0, 1)
-            sleep((rotation_end) / rotationInOneSecond)
+            sleep(abs((rotation_end) / rotationInOneSecond))
             arlo.stop()
         if rotation_end >0:
             arlo.go_diff(30, 29, 1, 0)
-            sleep((rotation_end) / rotationInOneSecond)
+            sleep(abs((rotation_end) / rotationInOneSecond))
             arlo.stop()
     
         target_distance=(x_end-end_target[0])**2+ y_end**2  #The distance from the robot to the target_end is caculated using pythagoras
@@ -437,12 +454,14 @@ while True:
         #The rest of the code is what we useally do when driving forward.
         actual_driven_dist = 0
         t = (target_distance)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
-        dt = t / 1000.0     
+        dt = t / 25.0     
         current_time = 0
+        c = 0
         stop_dist = 200
 
         while current_time < t:
-            current_time += dt
+            a = time.clock()
+            current_time += dt +c
             actual_driven_dist += dt*translationInOneSecond 
     
             sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
@@ -454,7 +473,8 @@ while True:
                 break
           
             arlo.go_diff(80, 79, 1, 1)
-            sleep(dt)
+            b = time.clock()
+            sleep(dt-(b-a))
         arlo.stop()
         print 'actual_driven_dist=',actual_driven_dist
  
