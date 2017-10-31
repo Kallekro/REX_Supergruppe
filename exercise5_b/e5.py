@@ -8,6 +8,7 @@ import random_numbers as rnd
 import copy
 import robot
 from time import sleep
+import time
 
 # TODO: The coordinate system is such that the y-axis points downwards due to the visualization in draw_world.
 # Consider changing the coordinate system into a normal cartesian coordinate system.
@@ -281,27 +282,29 @@ while True:
         elif lastMeasuredAngle < 0:
             arlo.go_diff(30, 29, 1, 0)
 
-        eps = 0.01
+        eps = 0.1
         if lastMeasuredAngle < 0-eps or lastMeasuredAngle > 0+eps:
             sleep((abs(lastMeasuredAngle)) / rotationInOneSecond)
             arlo.stop()
 
         # Drive forward
+        safety_dist=40.0
         dist = math.sqrt((landmarks[lastSeenLM][0] - est_pose.getX())**2 + (landmarks[lastSeenLM][1] - est_pose.getY())**2) 
-        driving_dist = dist# - 35
+        driving_dist = dist - safety_dist# - 35
         if visitedLM[0] or visitedLM[1]:
             driving_dist /= 2
         
-        actual_driven_dist = 0
-        satefy_dist=100
-        t = (driving_dist-satefy_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
-        dt = t / 1000.0 
+        actual_driven_dist = 0  
+        t = (driving_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
+        dt = t/25.0 
         current_time = 0
+        c = 0
         while current_time < t:
-            current_time += dt
+            a = time.clock()
+            current_time += dt+c
             actual_driven_dist += dt*translationInOneSecond 
-    
-            stop_dist = 200
+            
+            stop_dist = 300
             sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
             print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
             if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
@@ -311,13 +314,16 @@ while True:
                 break
           
             arlo.go_diff(80, 79, 1, 1)
-            sleep(dt)
+            b = time.clock()
+            c = b-a
+            sleep((dt-c))
         arlo.stop()
+        print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
 
         print "Actual dist: ", actual_driven_dist, " - Total dist: ", driving_dist
         print "Dist diff: ", driving_dist - actual_driven_dist
 
-        if abs(driving_dist - actual_driven_dist-satefy_dist) < 35:
+        if abs(driving_dist - actual_driven_dist) < 35:
             visitedLM[lastSeenLM] = True
 
         LMInSight = False
@@ -362,7 +368,7 @@ while True:
             
             driving_dist=30
             t = driving_dist/translationInOneSecond
-            dt = t / 100.0 + 0.05
+            dt = 0.1
             current_time = 0
             stop_dist = 200
             while current_time < t:
@@ -376,7 +382,6 @@ while True:
                     print "Sensor stopp!"
                     break
                 arlo.go_diff(80, 79, 1, 1)
-                sleep(dt)
             arlo.stop()
         
         
@@ -410,7 +415,7 @@ while True:
                 dy = np.sin(particle.getTheta())*translationInOneSecond
                 par.move_particle(particle, dx, dy, -(math.pi * 0.50) / rotationInOneSecond)
             turn_counter = 0
-
+    print "\n"
     # Draw map
     draw_world(est_pose, particles, world)
     
