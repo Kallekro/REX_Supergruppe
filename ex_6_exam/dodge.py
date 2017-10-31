@@ -142,7 +142,7 @@ print "Opening and initializing camera"
 cam = camera.Camera(0, 'arlo')
 
 
-def turnTOLandmark(float angle):
+def turnTOLandmark(angle):
 	if angle > 0:
 		arlo.go_diff(30, 29, 0, 1)
 	elif angle < 0:
@@ -251,7 +251,7 @@ while True:
     print "Visited lms: ", visitedLM
 
     # XXX: Make the robot drive
-    if weightMean > 0.6 and LMInSight and not visitedLM[lastSeenLM]:
+    if weightMean > 0.6 and LMInSight == curr_landmark and not visitedLM[curr_landmark]:
         turn_counter = 0
 
         # Turn towards landmark
@@ -292,14 +292,15 @@ while True:
             b = time.clock()
             c = b-a
             sleep(abs(dt-c))
-        arlo.stop()
+        arlo.stop() ## If the robot has driven for time, t.
 
         print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
         print "Actual dist: ", actual_driven_dist, " - Total dist: ", driving_dist
         print "Dist diff: ", driving_dist - actual_driven_dist
-
+        
         if visitedLM[curr_landmark] == False and (sensor_reads[0] <= 350 or sensor_reads[1] <= 350 or sensor_reads[2] <= 350):
             visitedLM[curr_landmark] = True
+            print "VISITED!"
 
         LMinsight = None
 
@@ -307,7 +308,7 @@ while True:
             dx = np.cos(particle.getTheta())*actual_driven_dist
             dy = np.sin(particle.getTheta())*actual_driven_dist
             par.move_particle(particle, dx, -dy, 0)
-           turn_counter = 0
+            turn_counter = 0
 
     draw_world(est_pose, particles, world)
     # Show frame
