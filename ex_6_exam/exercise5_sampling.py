@@ -39,7 +39,7 @@ def deltaY(Theta,DrivenDistance):
 	return np.sin(Theta*180/np.pi)*DrivenDistance
 
 def jet(x):
-    """Colour map for drawing particles. This function determines the colour of 
+    """Colour map for drawing particles. This function determines the colour of
     a particle from its weight."""
     r = (x >= 3.0/8.0 and x < 5.0/8.0) * (4.0 * x - 3.0/2.0) + (x >= 5.0/8.0 and x < 7.0/8.0) + (x >= 7.0/8.0) * (-4.0 * x + 9.0/2.0)
     g = (x >= 1.0/8.0 and x < 3.0/8.0) * (4.0 * x - 1.0/2.0) + (x >= 3.0/8.0 and x < 5.0/8.0) + (x >= 5.0/8.0 and x < 7.0/8.0) * (-4.0 * x + 7.0/2.0)
@@ -50,16 +50,16 @@ def jet(x):
 def draw_world(est_pose, particles, world):
     """Visualization.
     This functions draws robots position in the world coordinate system."""
-        
+
     # Fix the origin of the coordinate system
     offsetX = 100;
     offsetY = 250;
-    
+
     # Constant needed for transforming from world coordinates to screen coordinates (flip the y-axis)
     ymax = world.shape[0]
-    
+
     world[:] = CWHITE # Clear background to white
-    
+
     # Find largest weight
     max_weight = 0
     for particle in particles:
@@ -71,19 +71,19 @@ def draw_world(est_pose, particles, world):
         y = ymax - (int(particle.getY()) + offsetY)
         colour = jet(particle.getWeight() / max_weight)
         cv2.circle(world, (x,y), 2, colour, 2)
-        b = (int(particle.getX() + 15.0*np.cos(particle.getTheta()))+offsetX, 
+        b = (int(particle.getX() + 15.0*np.cos(particle.getTheta()))+offsetX,
                                      ymax - (int(particle.getY() - 15.0*np.sin(particle.getTheta()))+offsetY))
         cv2.line(world, (x,y), b, colour, 2)
-   
+
     # Draw landmarks
     lm0 = (int(landmarks[0][0]+offsetX), int(ymax-(landmarks[0][1]+offsetY)))
     lm1 = (int(landmarks[1][0]+offsetX), int(ymax-(landmarks[1][1]+offsetY)))
     cv2.circle(world, lm0, 5, CRED, 2)
     cv2.circle(world, lm1, 5, CGREEN, 2)
-    
+
     # Draw estimated robot pose
     a = (int(est_pose.getX())+offsetX, ymax-(int(est_pose.getY())+offsetY))
-    b = (int(est_pose.getX() + 15.0*np.cos(est_pose.getTheta()))+offsetX, 
+    b = (int(est_pose.getX() + 15.0*np.cos(est_pose.getTheta()))+offsetX,
                                  ymax-(int(est_pose.getY() - 15.0*np.sin(est_pose.getTheta()))+offsetY))
     cv2.circle(world, a, 5, CMAGENTA, 2)
     cv2.line(world, a, b, CMAGENTA, 2)
@@ -102,7 +102,7 @@ cv2.moveWindow(WIN_World, 500       , 50);
 
 
 # Initialize particles
-num_particles = 250 
+num_particles = 250
 particles = []
 for i in range(num_particles):
     # Random starting points. (x,y) \in [-1000, 1000]^2, theta \in [-pi, pi].
@@ -121,8 +121,8 @@ arlo = robot.Robot()
 lastSeenLM = None
 LMInSight = False
 lastMeasuredAngle = 0
-translationInOneSecond = 200 
-rotationInOneSecond = 0.73 #0.qqaw79 # 1.13826 
+translationInOneSecond = 200
+rotationInOneSecond = 0.73 #0.qqaw79 # 1.13826
 weightMean = 0
 visitedLM = [False, False]
 turn_counter = 0
@@ -140,6 +140,12 @@ print "Opening and initializing camera"
 #cam = camera.Camera(0, 'frindo')
 cam = camera.Camera(0, 'arlo')
 
+
+def turnTOLandmark(float angle):
+	if angle > 0:
+		arlo.go_diff(30, 29, 0, 1)
+	elif angle < 0:
+		arlo.go_diff(30, 29, 1, 0)
 while True:
     #if visitedLM[0] and visitedLM[1]:
     #  # VICTORY
@@ -147,37 +153,37 @@ while True:
     #  sleep(2)
     #  arlo.stop()
     #  while cv2.waitKey(15) != ord('q'):
-    #    continue 
+    #    continue
     #  break
     # Move the robot according to user input (for testing)
-    action = cv2.waitKey(15)
-    
-    if action == ord('w'): # Forward
-        velocity += 4.0;
-    elif action == ord('x'): # Backwards
-        velocity -= 4.0;
-    elif action == ord('s'): # Stop
-        velocity = 0.0;
-        angular_velocity = 0.0;
-    elif action == ord('a'): # Left
-        angular_velocity -= 0.2;
-    elif action == ord('d'): # Right
-        angular_velocity += 0.2;
-    elif action == ord('q'): # Quit
-        break
-    elif action == ord('g'): # GO
-        arlo_go = True
-    else:
-        arlo_go = False
+    #action = cv2.waitKey(15)
+    #
+    #if action == ord('w'): # Forward
+    #    velocity += 4.0;
+    #elif action == ord('x'): # Backwards
+    #    velocity -= 4.0;
+    #elif action == ord('s'): # Stop
+    #    velocity = 0.0;
+    #    angular_velocity = 0.0;
+    #elif action == ord('a'): # Left
+    #    angular_velocity -= 0.2;
+    #elif action == ord('d'): # Right
+    #    angular_velocity += 0.2;
+    #elif action == ord('q'): # Quit
+    #    break
+    #elif action == ord('g'): # GO
+    #    arlo_go = True
+    #else:
+    #    arlo_go = False
 
-        
+
     # Read odometry, see how far we have moved, and update particles.
     # Or use motor controls to update particles
     # XXX: You do this
 
     # Fetch next frame
-    colour, distorted = cam.get_colour()    
-    
+    colour, distorted = cam.get_colour()
+
     # Detect objects
     objectType, measured_distance, measured_angle, colourProb = cam.get_object(colour)
     if objectType != 'none':
@@ -228,13 +234,13 @@ while True:
 
            if particle.getY() < 0:
                p_theta = math.pi*2 - p_theta
-           
+
            phi = math.acos(( lm[0] - particle.getX() ) / calculated_distance) - p_theta
-           
+
            angleWeight = (1/math.sqrt(2*math.pi*sigma_theta**2))*math.exp(-1* (((measured_angle-phi)**2)/(2*sigma_theta**2)))
 
            particle.setWeight(posWeight*angleWeight)
-           weight_sum += posWeight*angleWeight            
+           weight_sum += posWeight*angleWeight
 
         cumsum = [0.0]
         tsum = 0
@@ -244,7 +250,7 @@ while True:
             cumsum.append(tsum)
 
         print weight_sum
-        weightMean = (weight_sum / len(particles)) * 100  
+        weightMean = (weight_sum / len(particles)) * 100
 
         samples = []
         #resample_n = 1000
@@ -256,8 +262,8 @@ while True:
 
         for i in range(len(particles)):
             particles[i] = samples[i]
-            
-        
+
+
         # Draw detected pattern
         cam.draw_object(colour)
 
@@ -269,21 +275,18 @@ while True:
 
     par.add_uncertainty(particles, 5, 0.15)
 
-    
+
     est_pose = par.estimate_pose(particles) # The estimate of the robots current pose
 
     print "In sight = {0}".format(LMInSight)
-    print "Mean weight = {0}".format(weightMean) 
+    print "Mean weight = {0}".format(weightMean)
     print "Visited lms: ", visitedLM
 
     # XXX: Make the robot drive
     if weightMean > 0.6 and LMInSight and not visitedLM[lastSeenLM]:
         turn_counter = 0
         # Turn towards landmark
-        if lastMeasuredAngle > 0:
-            arlo.go_diff(30, 29, 0, 1)
-        elif lastMeasuredAngle < 0:
-            arlo.go_diff(30, 29, 1, 0)
+        turnTOLandmark(lastMeasuredAngle)
 
         eps = 0.01
         if lastMeasuredAngle < 0-eps or lastMeasuredAngle > 0+eps:
@@ -291,26 +294,26 @@ while True:
             arlo.stop()
                 # Drive forward
         safety_dist=40.0
-        dist = math.sqrt((landmarks[lastSeenLM][0] - est_pose.getX())**2 + (landmarks[lastSeenLM][1] - est_pose.getY())**2) 
+        dist = math.sqrt((landmarks[lastSeenLM][0] - est_pose.getX())**2 + (landmarks[lastSeenLM][1] - est_pose.getY())**2)
         print "DIST", dist
         driving_dist = dist - safety_dist# - 35
         if visitedLM[0] or visitedLM[1]:
             driving_dist /= 4
-        
-        actual_driven_dist = 0  
+
+        actual_driven_dist = 0
         t = (driving_dist)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
-        dt = t/25.0 
+        dt = t/25.0
         current_time = 0
         c = 0
         while current_time < t:
             a = time.clock()
             current_time += dt+c
-            actual_driven_dist += dt*translationInOneSecond 
-            
+            actual_driven_dist += dt*translationInOneSecond
+
             stop_dist = 300
             sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
             print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
-            if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
+            if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist:
                 #arlo.stop()
                 #arlo.go_diff(80,79,0,0)
                 #sleep(0.15)
@@ -318,7 +321,7 @@ while True:
                 LMInSight = False
                 print "Sensor stopp!"
                 break
-          
+
             arlo.go_diff(80, 79, 1, 1)
             b = time.clock()
             c = b-a
@@ -333,88 +336,39 @@ while True:
             visitedLM[lastSeenLM] = True
 
         LMinsight = False
-       
+
         for particle in particles:
             dx = np.cos(particle.getTheta())*actual_driven_dist
             dy = np.sin(particle.getTheta())*actual_driven_dist
             par.move_particle(particle, dx, -dy, 0)
- 
-    #The purpose of the next function is get closer into the middel of the two boxes. So after the robot have droven
-    #half of the distance to the second box, the robot wil drive from its position into the middel of the virtual chart. 
-    if visitedLM[0] and visitedLM[1] and not foundMiddle: #Actiated if the robot have visited both boxes
-        print 'both landmarks visited, now going closer to the middel'
-        foundMiddle = True
-        x_end=est_pose.getX() # the X,Y coordinates of the average of all the particles and the average orritatin (theta_end) of them
-        y_end=est_pose.getY()
-        theta_end=est_pose.getTheta() 
-        end_target=[(landmarks[0][0]+landmarks[1][0])/2, (landmarks[0][1]+landmarks[1][1])/2] #The coordinates for the middel
-        # of the two boxes will be around  (100,0 )
-        phi_end=math.atan(y_end/(x_end-end_target[0])) #The angel between the robot and the end_target (if the robot was facing directely east)
-        rotation_end=phi_end-theta_end #Since the robot already is orintated in a direction theta_end, this is taking into account 
-        #when calculating how much, the robot has to rotate in order to face the target_end. 
-        
-        if rotation_end >0:
-            arlo.go_diff(30, 29, 0, 1)
-            sleep(abs((rotation_end) / rotationInOneSecond))
-            arlo.stop()
-        if rotation_end <0:
-            arlo.go_diff(30, 29, 1, 0)
-            sleep(abs((rotation_end) / rotationInOneSecond))
-            arlo.stop()
-    
-        target_distance=(x_end-end_target[0])**2+ y_end**2  #The distance from the robot to the target_end is caculated using pythagoras
-        
-        #The rest of the code is what we useally do when driving forward.
-        actual_driven_dist = 0
-        t = (target_distance)/translationInOneSecond #I have substracted safety_dist because it otherwise drove too close to the boxes
-        dt = t / 25.0     
-        current_time = 0
-        c = 0
-        stop_dist = 200
 
-        while current_time < t:
-            a = time.clock()
-            current_time += dt +c
-            actual_driven_dist += dt*translationInOneSecond 
-    
-            sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
-            print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
-            if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
-                arlo.stop()
-                LMInSight = False
-                print "Sensor stopp!"
-                break
-          
-            arlo.go_diff(80, 79, 1, 1)
-            b = time.clock()
-            sleep(dt-(b-a))
-        arlo.stop()
-        print 'actual_driven_dist=',actual_driven_dist
-        
+    #The purpose of the next function is get closer into the middel of the two boxes. So after the robot have droven
+    #half of the distance to the second box, the robot wil drive from its position into the middel of the virtual chart.
+
     elif not LMInSight or (LMInSight and visitedLM[lastSeenLM]) and not (visitedLM[0] and visitedLM[1]):
 
         if turn_counter < 8:
             turn_counter += 1
             print 'Turning around. Number of turns:', turn_counter
 
-            # rotate 
+            # rotate
             arlo.go_diff(30, 29, 0, 1)
             sleep((math.pi * 0.25) / rotationInOneSecond)
             arlo.stop()
             for particle in particles:
                 par.move_particle(particle, 0, 0, -(math.pi * 0.25) / rotationInOneSecond)
-                
-                
+
+
         elif visitedLM[0] or visitedLM[1]: # Going around a box. Explore
-        
+
             print 'Trying to go around a box in front of me'
             arlo.go_diff(80, 79, 0, 0)
             sleep(0.25)
-            
+
             arlo.go_diff(30, 29, 1, 0)
             sleep((math.pi * 0.30) / rotationInOneSecond)
-            
-            
+
+
             driving_dist=30
             t = driving_dist/translationInOneSecond
             dt = t / 25.0
@@ -424,10 +378,10 @@ while True:
             while current_time < t:
                 a = time.clock()
                 current_time += dt+c
-                
+
                 sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
                 print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
-                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
+                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist:
                     arlo.stop()
                     LMInSight = False
                     print "Sensor stopp!"
@@ -436,13 +390,13 @@ while True:
                 b = time.clock()
                 sleep(dt- (a-b))
             arlo.stop()
-        
-        
+
+
             arlo.go_diff(30, 29, 0, 1)
             sleep((math.pi * 0.45) / rotationInOneSecond)
             arlo.stop()
-            
-            
+
+
             driving_dist=70
             t = driving_dist/translationInOneSecond
             dt = t / 25.0
@@ -452,10 +406,10 @@ while True:
             while current_time < t:
                 a = time.clock()
                 current_time += dt+c
-    
+
                 sensor_reads = [arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)]
                 print "Front: {0} - Left: {1} - Right: {2}".format(sensor_reads[0], sensor_reads[1], sensor_reads[2])
-                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist: 
+                if sensor_reads[0] < stop_dist or sensor_reads[1] < stop_dist or sensor_reads[2] < stop_dist:
                     arlo.stop()
                     LMInSight = False
                     print "Sensor stopp!"
@@ -464,8 +418,8 @@ while True:
                 b = time.clock()
                 sleep(dt-(b-a))
             arlo.stop()
-            
-            
+
+
             for particle in particles:
                 dx = np.cos(particle.getTheta())*translationInOneSecond
                 dy = np.sin(particle.getTheta())*translationInOneSecond
@@ -479,18 +433,18 @@ while True:
     # Show world
     cv2.imshow(WIN_World, world);
     print "LOOL"
-    #sleep(2)     
+    #sleep(2)
 
- 
+
     # Draw map
     draw_world(est_pose, particles, world)
-    
+
     # Show frame
     cv2.imshow(WIN_RF1, colour);
 
     # Show world
     cv2.imshow(WIN_World, world);
-    
-    
+
+
 # Close all windows
 cv2.destroyAllWindows()
