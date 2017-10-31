@@ -142,7 +142,7 @@ print "Opening and initializing camera"
 cam = camera.Camera(0, 'arlo')
 
 
-def turnTOLandmark(float angle):
+def turnTOLandmark(angle):
 	if angle > 0:
 		arlo.go_diff(30, 29, 0, 1)
 	elif angle < 0:
