@@ -10,10 +10,8 @@ import robot
 from time import sleep
 import time
 
-
 # TODO: The coordinate system is such that the y-axis points downwards due to the visualization in draw_world.
 # Consider changing the coordinate system into a normal cartesian coordinate system.
-
 
 # Some colors constants
 CRED = (0, 0, 255)
@@ -43,7 +41,7 @@ sigma_distance = 15.0  # chose a number
 sigma_theta = 1.0
 safety_dist = 40.0
 eps = 0.01
-next_lm = 1
+next_lm = 0
 forceCheck = False
 avoiding_box = False
 
@@ -171,12 +169,16 @@ def turnAngle(angle):
     sleep(abs(angle) / rotationInOneSecond)
     arlo.stop()
 
-def driveArlo(dt, t):
-    actual_driven_dist, current_time, c = 0, 0, 0
-    avoiding_box = False
+
+
+def driveArlo(dt, t, speedLeft = 80, speedRight = 79):
+    print "DT:", dt
+    #dt = 0.005
+    actual_driven_dist, current_time, c = 0.0, 0.0, 0.0
+    global avoiding_box
     while current_time < t:
         a = time.clock()
-        current_time += dt + c
+        current_time += dt
         actual_driven_dist += dt * translationInOneSecond
 
         stop_dist = 300
@@ -186,10 +188,15 @@ def driveArlo(dt, t):
             avoiding_box = True
             break
 
-        arlo.go_diff(80, 79, 1, 1)
+        arlo.go_diff(speedLeft, speedRight, 1, 1)
         b = time.clock()
         c = b - a
-        sleep(abs(dt - c))
+        if dt - c > 0:
+          sleep(dt -  c)
+        else:
+          current_time += dt - c
+    arlo.stop()
+    updateParticles(actual_driven_dist, 0)
     return actual_driven_dist
 
 def readAllSensors():
@@ -211,7 +218,7 @@ def updateParticles(d_dist, d_theta):
     for particle in particles:
         dx = np.cos(particle.getTheta()) * d_dist
         dy = np.sin(particle.getTheta()) * d_dist
-        par.move_particle(particle, dx, dy, d_theta)
+        par.move_particle(particle, dx, -dy, d_theta)
 
 def angle_to_lm(target_lm):
     theta_end=est_pose.getTheta() 
@@ -222,6 +229,9 @@ def angle_to_lm(target_lm):
     #when calculating how much, the robot has to rotate in order to face the target_end. 
 
 while True:
+    action = cv2.waitKey(15)
+    if action == ord("q"):
+        break
     # Fetch next frame
     colour, distorted = cam.get_colour()
 
@@ -284,6 +294,10 @@ while True:
 
             particle.setWeight(posWeight * angleWeight)
             weight_sum += posWeight * angleWeight
+        
+        if weight_sum < 0: ## Set uniform weights
+            for p in particles:
+                p.setWeight(1.0 / num_particles)
 
         cumsum = [0.0]
         tsum = 0
@@ -322,39 +336,47 @@ while True:
     print "In sight = {0}".format(LMInSight)
     print "Mean weight = {0}".format(weightMean)
     print "Visited lms: ", visitedLM
-
     if LMInSight:
         forceCheck = False 
-        turn_counter = 0
     # XXX: Make the robot drive
     if avoiding_box:
-        
+        print "Avoiding box:"
         sensor_reads = readAllSensors()
+        turning = False
         if sensor_reads[1] < sensor_reads[2]:
             critical_sensor = 1
         else:
             critical_sensor = 2
-       while sensor_reads[critical_sensor] < max_dodge_thresh or sensor_reads[0] < max_dodge_thresh:
+        while sensor_reads[critical_sensor] < max_dodge_thresh or sensor_reads[0] < max_dodge_thresh:
            # Dodge
-           if sensor_reads[critical_sensor] < min_dodge_thresh or sensor_reads[0] < min_dodge_thresh:
-               # Turn away
-               if critical_sensor == 1: # Turn right
+            if sensor_reads[critical_sensor] < min_dodge_thresh or sensor_reads[0] < min_dodge_thresh:
+                # Turn away
+                turning = True
+                if critical_sensor == 1: # Turn right
                    arlo.go_diff(30, 29, 1, 0)
-               else: # Turn left
+                else: # Turn left
                    arlo.go_diff(30, 29, 0, 1)
-           else:
-               # Drive forward
-               arlo.go_diff(40, 39, 1, 1)
+            else:
+                # Drive forward
+                turning = False
+                arlo.go_diff(40, 39, 1, 1)
+            if turning:
+              if critical_sensor == 1:
+                updateParticles(0, 0.01*rotationInOneSecond)
+              else:
+                updateParticles(0, -0.01*rotationInOneSecond)
+            else:
+                updateParticles(0.01*translationInOneSecond, 0)
 
-           sleep(0.01)
-           sensor_reads = readAllSensors()
-       # Turn towards destination
-       turnAngle(angle_to_lm(next_lm))
-       avoiding_box = False
+            sleep(0.01)
+            sensor_reads = readAllSensors()
+            print "Sensor reads: ", sensor_reads
+        arlo.stop()
+        driveArlo(0.1/25, 0.1, 40, 39)
+        # Turn towards destination
+        turnAngle(angle_to_lm(next_lm))
+        avoiding_box = False
 
-
-
-        
     elif weightMean > 0.6 and LMInSight and not visitedLM[lastSeenLM]:
         turn_counter = 0
         # Turn towards landmark
@@ -367,17 +389,23 @@ while True:
         # I have substracted safety_dist because it otherwise drove too close to the boxes
         t = (driving_dist) / translationInOneSecond
         dt = t / 25.0
-        actdist = driveArlo(dt, t, particles)
+        actdist = driveArlo(dt, t)
         arlo.stop()
     
         print "Actual dist: ", actdist, " - Total dist: ", driving_dist
         print "Dist diff: ", driving_dist - actdist
 
-        if abs(driving_dist - actdist) < 30:
-            visitedLM[lastSeenLM] = True
+        if abs(driving_dist - actdist) < 25:
+            sensors = readAllSensors()
+            if sensors[0] < 300 or sensors[1] < 300 or sensors[2] < 300:
+                visitedLM[lastSeenLM] = True
+                avoiding_box = False
+                next_lm += 1
 
         LMinsight = False
-        updateParticles(actdist, lastMeasuredAngle )
+
+    elif weightMean > 0.6 and LMInSight and visitedLM[lastSeenLM]:
+        turnAngle(angle_to_lm(next_lm))
 
     elif not LMInSight:
 
@@ -389,23 +417,20 @@ while True:
             arlo.go_diff(30, 29, 0, 1)
             sleep((math.pi * 0.25) / rotationInOneSecond)
             arlo.stop()
-            updateParticles(0, 0, math.pi*0.25)
+            updateParticles(0, math.pi*0.25)
 
-        elif visitedLM[0]: ## First landmark visited
+        elif turn_counter < 8 and visitedLM[0]: ## First landmark visited
             ## calculate angle to curr_landmark.
             next_lm_angle = angle_to_lm(next_lm)
+            print "Turning Oh yeah."
             turnAngle(next_lm_angle)
             forceCheck = True
         else:  ## Explore!
+            print "Explore!"
+            driveArlo(2.0/25, 2.0)
+            turn_counter = 0
+            forceCheck = True
             pass
-
-    draw_world(est_pose, particles, world)
-    # Show frame
-    cv2.imshow(WIN_RF1, colour)
-
-    # Show world
-    cv2.imshow(WIN_World, world)
-    # sleep(2)
 
     # Draw map
     draw_world(est_pose, particles, world)
