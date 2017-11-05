@@ -44,9 +44,10 @@ eps = 0.01
 forceCheck = False
 avoiding_box = False
 next_lm = 0
+already_turned = False
 
 # Landmarks. Their coordinates are in cm.
-landmarks = [(0.0, 0.0), (0.0, 300.0), (400.0, 0.0), (400.0, 300.0)]
+landmarks = [(0.0, 0.0), (0.0, 300.0), (300.0, 0.0), (400.0, 300.0)]
 
 
 def deltaX(Theta, DrivenDistance):
@@ -141,7 +142,7 @@ cv2.moveWindow(WIN_World, 500, 50)
 
 
 # Initialize particles
-num_particles = 3000
+num_particles = 500
 particles = []
 for i in range(num_particles):
     # Random starting points. (x,y) \in [-1000, 1000]^2, theta \in [-pi, pi].
@@ -185,6 +186,8 @@ def turnToLandmark(angle):
 def driveArlo(dt, t, speedLeft = 80, speedRight = 79):
     global turn_counter
     global avoiding_box
+    global already_turned
+    already_turned = False
     turn_counter=0
     #print "DT:", dt
     #dt = 0.005
@@ -286,11 +289,17 @@ def sampleWeights():
     return weightMean
 
 def angle_to_lm(target_lm):
+
     theta_end=est_pose.getTheta() 
     target=[landmarks[target_lm][0], landmarks[target_lm][1]] #The coordinates for the middel
+    dist = math.sqrt((target[0] - est_pose.getX()) ** 2 + (target[1] - est_pose.getY())**2)
+
+    phi = math.acos((target[0] - est_pose.getX()) /
+                      dist) - theta_end
     # of the two boxes will be around  (100,0 )
-    phi_end=math.atan(est_pose.getY()/(est_pose.getX()-target[0])) #The angel between the robot and the end_target (if the robot was facing directely east)
-    return phi_end-theta_end #Since the robot already is orintated in a direction theta_end, this is taking into account 
+    #phi_end=math.atan(est_pose.getY()/(est_pose.getX()-target[0])) #The angel between the robot and the end_target (if the robot was facing directely east)
+    print "Angle to landmark:", phi
+    return phi #Since the robot already is orintated in a direction theta_end, this is taking into account 
     #when calculating how much, the robot has to rotate in order to face the target_end. 
 
 def correct_lm_found_go_straight():
@@ -320,8 +329,8 @@ def correct_lm_found_go_straight():
         print "Dist diff: ", driving_dist - actdist
 
           
-        if abs(driving_dist - actdist) < 25:
-            sensors = readAllSensors()
+        sensors = readAllSensors()
+        if abs(driving_dist - actdist) < 40:
             while sensors[0] > 350 and sensors[1] > 350 and sensors[2] > 350:
                 print arlo.read_sensor(0), arlo.read_sensor(2), arlo.read_sensor(3)
                 driveArlo(0.25/25, 0.25)
@@ -339,7 +348,8 @@ def correct_lm_found_go_straight():
 def turn_to_search():
     global turn_counter
     global forceCheck
-    if turn_counter < 8 and (lastSeenLM==0 or (not visitedLM[0] or forceCheck)):
+    global already_turned
+    if (next_lm == 1 and lastSeenLM == 0) or (not visitedLM[0] or forceCheck):
         turn_counter += 1
         print 'Turning around. Number of turns:', turn_counter
 
@@ -349,15 +359,19 @@ def turn_to_search():
         arlo.stop()
         updateParticles(0, -math.pi*0.25)
 
-    elif turn_counter < 8 and visitedLM[0]: ## First landmark visited
+    elif visitedLM[0]: ## First landmark visited
         ## calculate angle to curr_landmark.
         next_lm_angle = angle_to_lm(next_lm)
         print 'turnToLandmark'
-
+        turn_counter = 0
         print 'next_lm=',next_lm, landmarks[next_lm]
         print 'angel to next lm=',angle_to_lm(next_lm)
         turnToLandmark(next_lm_angle)
-        forceCheck = True
+        if already_turned:
+          driveArlo(2/25, 2)
+        else:
+          already_turned = True
+          forceCheck = True
     
     
 def avoid_box():
@@ -416,23 +430,23 @@ while True:
         print "------------------------------------------------------"
         if (objectType == 'vertical'):
             if colourProb[1] < 0.30:
-                lm = landmarks[0]
-                lastSeenLM = 0
-                print 'Landmark 1. Vertical and red'
-            else:
                 lm = landmarks[1]
                 lastSeenLM = 1
-                print 'Landmark 2. Vertical and green'
-                
-        if (objectType == 'horizontal'):
-            if colourProb[1] >0.30:
-                lm = landmarks[2]
-                lastSeenLM = 2
-                print 'Landmark 3. Horizontal and green'
+                print 'Landmark 1. Vertical and red'
             else:
                 lm = landmarks[3]
                 lastSeenLM = 3
-                print 'Landmark 4. Horizontal and red'
+                print 'Landmark 2. Vertical and green'
+                
+        if (objectType == 'horizontal'):
+            if colourProb[1] >0.35:
+                lm = landmarks[0]
+                lastSeenLM = 0
+                print 'Landmark 1. Horizontal and green'
+            else:
+                lm = landmarks[2]
+                lastSeenLM = 2
+                print 'Landmark 3. Horizontal and red'
      
         print "Colour probabilities = ", colourProb
         print "Measured distance = ", measured_distance
@@ -481,7 +495,7 @@ while True:
         for p in particles:
             p.setWeight(1.0 / num_particles)
 
-    par.add_uncertainty(particles, 5, 0.15)
+    par.add_uncertainty(particles, 2.5, 0.10)
 
     # The estimate of the robots current pose
     est_pose = par.estimate_pose(particles)
@@ -493,7 +507,6 @@ while True:
     # XXX: Make the robot drive
     if avoiding_box:
         avoid_box()
-        
     elif LMInSight and weightMean < 0.6:
         print 'waiting for the mean to increase'
         
@@ -501,25 +514,22 @@ while True:
         if lastSeenLM ==next_lm:  
             print 'Driving towards landmark ', next_lm
             correct_lm_found_go_straight()
-    
-                        
         elif turn_counter < 8:
-            print 'turnToLandmark'
-
-            print 'next_lm=',next_lm, landmarks[next_lm]
-            print 'angel to next lm=',angle_to_lm(next_lm)
             turn_to_search()
         else:
             print "Explore!"
+            turnToLandmark(angle_to_lm(next_lm))
             driveArlo(2.0/25, 2.0)
             turn_counter = 0
             forceCheck = True
+            
                             
     elif turn_counter < 8:
         turn_to_search()  
             
     else:
         print "Explore!"
+        turnToLandmark(angle_to_lm(next_lm))
         driveArlo(2.0/25, 2.0)
         turn_counter = 0
         forceCheck = True
@@ -577,20 +587,3 @@ while True:
 # Close all windows
 cv2.destroyAllWindows()
 
-"""
-        if lastSeenLM ==0 and not visitedLM[0] and not visitedLM[1] and not visitedLM[2] and not visitedLM[3]: #note that the  visitedLM[] starts it index at 0. So e.g. visitedLM[3] is the fourth landmark
-            print 'Driving towards landmark 1'
-            correct_lm_found_go_straight()
-            
-        elif lastSeenLM ==1 and visitedLM[0] and not visitedLM[1] and not visitedLM[2] and not visitedLM[3]: #note that the  visitedLM[] starts it index at 0. So e.g. visitedLM[3] is the fourth landmark
-            print 'Driving towards landmark 2'
-            correct_lm_found_go_straight()
-            
-        elif lastSeenLM ==2 and visitedLM[0] and visitedLM[1] and not visitedLM[2] and not visitedLM[3]: #note that the  visitedLM[] starts it index at 0. So e.g. visitedLM[3] is the fourth landmark
-            print 'Driving towards landmark 3'
-            correct_lm_found_go_straight()
-            
-        elif lastSeenLM ==3 and visitedLM[0] and visitedLM[1] and  visitedLM[2] and not visitedLM[3]: #note that the  visitedLM[] starts it index at 0. So e.g. visitedLM[3] is the fourth landmark
-            print 'Driving towards landmark 4'
-            correct_lm_found_go_straight()
-"""
