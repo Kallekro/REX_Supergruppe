@@ -47,7 +47,7 @@ next_lm = 0
 already_turned = False
 
 # Landmarks. Their coordinates are in cm.
-landmarks = [(0.0, 0.0), (0.0, 300.0), (300.0, 0.0), (400.0, 300.0)]
+landmarks = [(0.0, 0.0), (0.0, 300.0), (400.0, 0.0), (400.0, 300.0)]
 
 
 def deltaX(Theta, DrivenDistance):
@@ -430,23 +430,23 @@ while True:
         print "------------------------------------------------------"
         if (objectType == 'vertical'):
             if colourProb[1] < 0.30:
-                lm = landmarks[1]
-                lastSeenLM = 1
+                lm = landmarks[0]
+                lastSeenLM = 0
                 print 'Landmark 1. Vertical and red'
             else:
-                lm = landmarks[3]
-                lastSeenLM = 3
+                lm = landmarks[1]
+                lastSeenLM = 1
                 print 'Landmark 2. Vertical and green'
                 
         if (objectType == 'horizontal'):
-            if colourProb[1] >0.35:
-                lm = landmarks[0]
-                lastSeenLM = 0
-                print 'Landmark 1. Horizontal and green'
-            else:
+            if colourProb[1] >0.30:
                 lm = landmarks[2]
                 lastSeenLM = 2
-                print 'Landmark 3. Horizontal and red'
+                print 'Landmark 3. Horizontal and green'
+            else:
+                lm = landmarks[3]
+                lastSeenLM = 3
+                print 'Landmark 4. Horizontal and red'
      
         print "Colour probabilities = ", colourProb
         print "Measured distance = ", measured_distance
